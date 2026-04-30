@@ -103,6 +103,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }}
       >
         <RainbowKitProvider
+          locale="en-US"
           theme={darkTheme({
             accentColor: "#CFD4DB",
             accentColorForeground: "#0D1B2A",
