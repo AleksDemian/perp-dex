@@ -12,8 +12,7 @@ interface PricePoint {
 
 export function usePriceHistory(range: "1H" | "4H" | "1D" | "ALL" = "1D") {
   const nowSec   = Math.floor(Date.now() / 1000);
-  const bucket   = Math.floor(nowSec / 60);
-  const toSec    = bucket * 60;
+  const toSec    = nowSec;
   const rangeMap = {
     "1H":  3_600,
     "4H":  14_400,

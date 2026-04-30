@@ -13,7 +13,7 @@ for (const path of candidates) {
   }
 }
 
-const required = ["PERP_ADDRESS", "RPC_URL", "CONTRACT_DEPLOY_BLOCK"];
+const required = ["PERP_ADDRESS", "USDC_ADDRESS", "RPC_URL", "CONTRACT_DEPLOY_BLOCK"];
 
 for (const key of required) {
   if (!process.env[key]) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
-import { useInsuranceFund, useSetPrice } from "@/hooks/usePerp";
+import { useSetPrice } from "@/hooks/usePerp";
 import { formatUsdc, formatPrice, priceToBigInt } from "@/lib/perp-math";
 import { useCurrentPrice } from "@/hooks/useCurrentPrice";
 
@@ -12,6 +12,7 @@ interface AdminStatus {
   openPositions: number;
   latestPrice: string | null;
   priceTimestamp: number | null;
+  contractTokenBalance: string;
 }
 
 // ── Price Control ─────────────────────────────────────────────────────────────
@@ -110,8 +111,6 @@ function PriceControl() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const { data: fundBal } = useInsuranceFund();
-
   const { data: adminStatus } = useQuery<AdminStatus>({
     queryKey: ["admin", "status"],
     queryFn:  async () => (await fetch("/api/admin/status")).json(),
@@ -134,7 +133,13 @@ export default function AdminPage() {
             {[
               { label: "Last Indexed Block", value: adminStatus?.lastIndexedBlock ?? "—" },
               { label: "Open Positions",     value: String(adminStatus?.openPositions ?? "—") },
-              { label: "Insurance Fund",     value: fundBal !== undefined ? `$${formatUsdc(fundBal)} mUSDC` : "—" },
+              {
+                label: "Contract Token Balance",
+                value:
+                  adminStatus?.contractTokenBalance !== undefined
+                    ? `$${formatUsdc(BigInt(adminStatus.contractTokenBalance))} mUSDC`
+                    : "—",
+              },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between">
                 <span className="text-text-muted">{label}</span>

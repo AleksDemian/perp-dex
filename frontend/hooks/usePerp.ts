@@ -88,6 +88,31 @@ function reconcileAfterIndexing(qc: QueryClient, keys: string[]) {
   reconciliationTimers.set(timerKey, timers);
 }
 
+interface CurrentPriceApiResponse {
+  price: string | null;
+  timestamp: number | null;
+  blockNumber?: number | null;
+}
+
+async function waitForIndexedPriceBlock(targetBlockNumber: number): Promise<void> {
+  const timeoutMs = 12_000;
+  const intervalMs = 1_200;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const response = await fetch("/api/price/current", { cache: "no-store" });
+      if (response.ok) {
+        const payload = (await response.json()) as CurrentPriceApiResponse;
+        if ((payload.blockNumber ?? 0) >= targetBlockNumber) return;
+      }
+    } catch {
+      // Ignore transient API errors and retry until timeout.
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
 export function useUsdcBalance() {
   const { address } = useAccount();
   return useReadContract({
@@ -538,6 +563,7 @@ export function useSetPrice() {
       const blockNumber = Number(receipt.blockNumber);
       setCurrentPrice(qc, price, blockNumber, blockTs);
       appendPriceHistoryPoint(qc, price, blockNumber, blockTs);
+      await waitForIndexedPriceBlock(blockNumber);
       reconcileAfterIndexing(qc, ["price", "positions", "liquidations"]);
 
       update(id, {

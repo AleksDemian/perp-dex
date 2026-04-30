@@ -1,7 +1,7 @@
 import "./load-env";
 import { openDb, getLastIndexedBlock, setLastIndexedBlock, purgeFromBlock } from "./db";
 import { createClient, fetchBlockTimestamps } from "./rpc";
-import { PERP_ADDRESS, PRICE_FEED_ADDRESS, PERP_ENGINE_ABI, PRICE_FEED_ABI } from "./abi";
+import { PERP_ADDRESS, PRICE_FEED_ADDRESS, USDC_ADDRESS, PERP_ENGINE_ABI, PRICE_FEED_ABI, ERC20_ABI } from "./abi";
 import { handlePositionOpened, handlePositionClosed, handlePositionLiquidated } from "./handlers/positions";
 import { handlePriceUpdated } from "./handlers/prices";
 
@@ -11,12 +11,26 @@ const BATCH_SIZE    = BigInt(process.env.INDEXER_BATCH_SIZE ?? "2000");
 const POLL_MS       = 6_000;
 const REORG_BUFFER  = 64n;
 const INDEX_META_KEY = `last_indexed_block:${PERP_ADDRESS.toLowerCase()}`;
+const CONTRACT_TOKEN_BALANCE_META_KEY = `contract_token_balance:${PERP_ADDRESS.toLowerCase()}`;
 
 const RANGE_ERROR_RE =
   /more than \d+ results|query returned more than|log response size|range is too wide|exceed|block range|limit.*exceeded/i;
 
 type Client = ReturnType<typeof createClient>;
 type DB     = ReturnType<typeof openDb>;
+
+async function syncContractTokenBalance(db: DB, client: Client): Promise<void> {
+  const balance = await client.readContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [PERP_ADDRESS],
+  });
+
+  db.prepare(
+    "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)"
+  ).run(CONTRACT_TOKEN_BALANCE_META_KEY, balance.toString());
+}
 
 async function processBatch(
   db: DB,
@@ -181,6 +195,7 @@ async function main(): Promise<void> {
     console.log(`[indexer] batch ${cursor}–${toBlock}`);
     try {
       await processBatchAdaptive(db, client, cursor, toBlock);
+      await syncContractTokenBalance(db, client);
       setLastIndexedBlock(db, toBlock, INDEX_META_KEY);
     } catch (err) {
       console.error(`[indexer] batch error:`, err);
@@ -206,6 +221,7 @@ async function main(): Promise<void> {
 
       purgeFromBlock(db, Number(from));
       await processBatchAdaptive(db, client, from, latest);
+      await syncContractTokenBalance(db, client);
       setLastIndexedBlock(db, latest, INDEX_META_KEY);
     } catch (err) {
       console.error("[indexer] poll error:", err);
