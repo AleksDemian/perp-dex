@@ -1,36 +1,43 @@
 import "./load-env";
 import { openDb, getLastIndexedBlock, setLastIndexedBlock, purgeFromBlock } from "./db";
 import { createClient, fetchBlockTimestamps } from "./rpc";
-import { PERP_ADDRESS, PRICE_FEED_ADDRESS, USDC_ADDRESS, PERP_ENGINE_ABI, PRICE_FEED_ABI, ERC20_ABI } from "./abi";
+import { PERP_ADDRESS, PRICE_FEED_ADDRESS, PERP_ENGINE_ABI, PRICE_FEED_ABI } from "./abi";
 import { handlePositionOpened, handlePositionClosed, handlePositionLiquidated } from "./handlers/positions";
 import { handlePriceUpdated } from "./handlers/prices";
 
 const DB_PATH       = process.env.DATABASE_PATH ?? "../data/app.db";
 const DEPLOY_BLOCK  = BigInt(process.env.CONTRACT_DEPLOY_BLOCK ?? "0");
 const BATCH_SIZE    = BigInt(process.env.INDEXER_BATCH_SIZE ?? "2000");
-const POLL_MS       = 6_000;
-const REORG_BUFFER  = 64n;
+
+function parsePollMs(): number {
+  const raw = process.env.INDEXER_POLL_MS;
+  if (!raw) return 6_000;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 2_000) return 6_000;
+  return Math.min(n, 120_000);
+}
+
+function parseReorgBuffer(): bigint {
+  const raw = process.env.INDEXER_REORG_BUFFER;
+  if (!raw?.trim()) return 64n;
+  try {
+    const n = BigInt(raw.trim());
+    if (n < 8n) return 64n;
+    return n > 256n ? 256n : n;
+  } catch {
+    return 64n;
+  }
+}
+
+const POLL_MS      = parsePollMs();
+const REORG_BUFFER = parseReorgBuffer();
 const INDEX_META_KEY = `last_indexed_block:${PERP_ADDRESS.toLowerCase()}`;
-const CONTRACT_TOKEN_BALANCE_META_KEY = `contract_token_balance:${PERP_ADDRESS.toLowerCase()}`;
 
 const RANGE_ERROR_RE =
   /more than \d+ results|query returned more than|log response size|range is too wide|exceed|block range|limit.*exceeded/i;
 
 type Client = ReturnType<typeof createClient>;
 type DB     = ReturnType<typeof openDb>;
-
-async function syncContractTokenBalance(db: DB, client: Client): Promise<void> {
-  const balance = await client.readContract({
-    address: USDC_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [PERP_ADDRESS],
-  });
-
-  db.prepare(
-    "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)"
-  ).run(CONTRACT_TOKEN_BALANCE_META_KEY, balance.toString());
-}
 
 async function processBatch(
   db: DB,
@@ -173,7 +180,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log(`[indexer] Starting — perp: ${PERP_ADDRESS}, db: ${DB_PATH}`);
+  console.log(
+    `[indexer] Starting — perp: ${PERP_ADDRESS}, db: ${DB_PATH}, pollMs: ${POLL_MS}, reorgBuffer: ${REORG_BUFFER}`
+  );
 
   const db     = openDb(DB_PATH);
   const client = createClient();
@@ -195,7 +204,6 @@ async function main(): Promise<void> {
     console.log(`[indexer] batch ${cursor}–${toBlock}`);
     try {
       await processBatchAdaptive(db, client, cursor, toBlock);
-      await syncContractTokenBalance(db, client);
       setLastIndexedBlock(db, toBlock, INDEX_META_KEY);
     } catch (err) {
       console.error(`[indexer] batch error:`, err);
@@ -221,7 +229,6 @@ async function main(): Promise<void> {
 
       purgeFromBlock(db, Number(from));
       await processBatchAdaptive(db, client, from, latest);
-      await syncContractTokenBalance(db, client);
       setLastIndexedBlock(db, latest, INDEX_META_KEY);
     } catch (err) {
       console.error("[indexer] poll error:", err);

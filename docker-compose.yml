@@ -11,6 +11,9 @@ services:
       RPC_URL: ${RPC_URL:-https://ethereum-sepolia.publicnode.com}
       CONTRACT_DEPLOY_BLOCK: ${CONTRACT_DEPLOY_BLOCK:-0}
       INDEXER_BATCH_SIZE: ${INDEXER_BATCH_SIZE:-2000}
+      INDEXER_POLL_MS: ${INDEXER_POLL_MS:-6000}
+      INDEXER_REORG_BUFFER: ${INDEXER_REORG_BUFFER:-64}
+      INDEXER_RPC_FALLBACK: ${INDEXER_RPC_FALLBACK:-true}
     volumes:
       - app-data:/data
     restart: unless-stopped

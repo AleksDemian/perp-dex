@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
-import { useSetPrice } from "@/hooks/usePerp";
+import { useInsuranceFund, useSetPrice } from "@/hooks/usePerp";
 import { formatUsdc, formatPrice, priceToBigInt } from "@/lib/perp-math";
 import { useCurrentPrice } from "@/hooks/useCurrentPrice";
 
@@ -12,7 +12,6 @@ interface AdminStatus {
   openPositions: number;
   latestPrice: string | null;
   priceTimestamp: number | null;
-  contractTokenBalance: string;
 }
 
 // ── Price Control ─────────────────────────────────────────────────────────────
@@ -110,14 +109,47 @@ function PriceControl() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function AdminPage() {
+function IndexerStatusCard() {
   const { data: adminStatus } = useQuery<AdminStatus>({
     queryKey: ["admin", "status"],
-    queryFn:  async () => (await fetch("/api/admin/status")).json(),
+    queryFn: async () => (await fetch("/api/admin/status")).json(),
     refetchInterval: 20_000,
     refetchOnWindowFocus: false,
   });
+  const { data: insuranceFund, isLoading: fundLoading } = useInsuranceFund();
 
+  const fundLabel =
+    fundLoading
+      ? "…"
+      : typeof insuranceFund === "bigint"
+        ? `$${formatUsdc(insuranceFund)} mUSDC`
+        : "—";
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-card p-4">
+      <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-text-secondary">
+        Indexer Status
+      </h2>
+      <div className="space-y-1.5 text-xs">
+        {[
+          { label: "Last Indexed Block", value: adminStatus?.lastIndexedBlock ?? "—" },
+          { label: "Open Positions", value: String(adminStatus?.openPositions ?? "—") },
+          {
+            label: "Insurance fund (on-chain)",
+            value: fundLabel,
+          },
+        ].map(({ label, value }) => (
+          <div key={label} className="flex justify-between">
+            <span className="text-text-muted">{label}</span>
+            <span className="font-mono text-text-primary">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function AdminPage() {
   return (
     <div className="mx-auto max-w-screen-lg px-4 py-6">
       <h1 className="mb-4 text-lg font-semibold text-text-primary">Admin Panel</h1>
@@ -125,29 +157,7 @@ export default function AdminPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <PriceControl />
 
-        <div className="rounded-lg border border-border bg-surface-card p-4">
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-text-secondary">
-            Indexer Status
-          </h2>
-          <div className="space-y-1.5 text-xs">
-            {[
-              { label: "Last Indexed Block", value: adminStatus?.lastIndexedBlock ?? "—" },
-              { label: "Open Positions",     value: String(adminStatus?.openPositions ?? "—") },
-              {
-                label: "Contract Token Balance",
-                value:
-                  adminStatus?.contractTokenBalance !== undefined
-                    ? `$${formatUsdc(BigInt(adminStatus.contractTokenBalance))} mUSDC`
-                    : "—",
-              },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between">
-                <span className="text-text-muted">{label}</span>
-                <span className="font-mono text-text-primary">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <IndexerStatusCard />
       </div>
 
     </div>

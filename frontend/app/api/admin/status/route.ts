@@ -8,7 +8,6 @@ export function GET() {
       process.env.PERP_ADDRESS ?? process.env.NEXT_PUBLIC_PERP_ADDRESS ?? ""
     ).toLowerCase();
     const scopedMetaKey = `last_indexed_block:${perpAddress}`;
-    const contractTokenBalanceMetaKey = `contract_token_balance:${perpAddress}`;
 
     const lastBlock = (
       db.prepare(
@@ -28,18 +27,11 @@ export function GET() {
       ).get() as { price: string; timestamp: number } | undefined
     );
 
-    const contractTokenBalance = (
-      db.prepare("SELECT value FROM meta WHERE key = ?").get(contractTokenBalanceMetaKey) as
-        | { value: string }
-        | undefined
-    )?.value ?? "0";
-
     return NextResponse.json({
       lastIndexedBlock: lastBlock,
       openPositions:    openCount,
       latestPrice:      latestPrice?.price    ?? null,
       priceTimestamp:   latestPrice?.timestamp ?? null,
-      contractTokenBalance,
     });
   } catch {
     return NextResponse.json({ error: "DB error" }, { status: 503 });
