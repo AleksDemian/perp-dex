@@ -8,10 +8,6 @@ export const PRICE_FEED_ADDRESS = getAddress(
   process.env.PRICE_FEED_ADDRESS ?? "0x0000000000000000000000000000000000000000"
 );
 
-export const USDC_ADDRESS = getAddress(
-  process.env.USDC_ADDRESS ?? "0x0000000000000000000000000000000000000000"
-);
-
 export const PERP_ENGINE_ABI = [
   {
     type: "event",
@@ -52,16 +48,6 @@ export const PERP_ENGINE_ABI = [
       { name: "bonus",      type: "uint256", indexed: false },
       { name: "remaining",  type: "uint256", indexed: false },
     ],
-  },
-] as const;
-
-export const ERC20_ABI = [
-  {
-    type: "function",
-    name: "balanceOf",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "view",
   },
 ] as const;
 

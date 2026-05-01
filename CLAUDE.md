@@ -78,8 +78,8 @@ Next.js 16 app-router with wagmi 2 + RainbowKit for wallet connection.
 **Pages:** `/` (trading UI), `/admin` (set oracle price), `/positions` (user positions), `/leaderboard` (liquidation stats).
 
 **Key files:**
-- `app/_components/` — Page-specific components: `OrderForm`, `PositionsTable`, `MarketBar`, `PriceChart`, `LiquidationFeed`.
-- `hooks/` — `useCurrentPrice`, `useLivePnl`, `usePositions`, `useLiquidations` — all read from the SQLite DB via API routes or from the chain via wagmi.
+- `app/_components/` — Page-specific components: `OrderForm`, `TradingDashboardPanel`, `MarketBar`, `PriceChart`.
+- `hooks/` — `useCurrentPrice`, `usePositions`, `useLiquidations`, `usePriceHistory` — all read from the SQLite DB via API routes or from the chain via wagmi.
 - `lib/contracts.ts` — Contract read/write helpers (wagmi).
 - `lib/perp-math.ts` — Liquidation price formula, PnL calculation mirroring on-chain logic.
 - `lib/db.ts` — SQLite client used by Next.js API routes.

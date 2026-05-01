@@ -4,8 +4,8 @@ import {
   useWriteContract,
   useReadContract,
   usePublicClient,
+  useAccount,
 } from "wagmi";
-import { useAccount } from "wagmi";
 import { parseEventLogs, parseUnits, type PublicClient } from "viem";
 import { PERP_ADDRESS, USDC_ADDRESS, PERP_ENGINE_ABI, MOCK_USDC_ABI, PRICE_FEED_ADDRESS, PRICE_FEED_ABI } from "@/lib/contracts";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
