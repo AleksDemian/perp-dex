@@ -1,0 +1,40 @@
+services:
+  indexer:
+    image: ${INDEXER_IMAGE:-ghcr.io/boostylabs/perp-dex-demo-indexer:latest}
+    container_name: perp-dex-demo-indexer
+    restart: unless-stopped
+    environment:
+      DATABASE_PATH: /data/app.db
+      PERP_ADDRESS: ${PERP_ADDRESS}
+      USDC_ADDRESS: ${USDC_ADDRESS}
+      PRICE_FEED_ADDRESS: ${PRICE_FEED_ADDRESS}
+      RPC_URL: ${RPC_URL}
+      CONTRACT_DEPLOY_BLOCK: ${CONTRACT_DEPLOY_BLOCK:-0}
+      INDEXER_BATCH_SIZE: ${INDEXER_BATCH_SIZE:-2000}
+      INDEXER_POLL_MS: ${INDEXER_POLL_MS:-6000}
+      INDEXER_REORG_BUFFER: ${INDEXER_REORG_BUFFER:-64}
+      INDEXER_RPC_FALLBACK: ${INDEXER_RPC_FALLBACK:-true}
+    volumes:
+      - app-data:/data
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/boostylabs/perp-dex-demo-frontend:latest}
+    container_name: perp-dex-demo-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_PATH: /data/app.db
+    volumes:
+      - app-data:/data:ro
+    depends_on:
+      - indexer
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  app-data:
