@@ -21,6 +21,10 @@ For deeper contributor notes (invariants, math, architecture), see [`CLAUDE.md`]
 - **Docker** + Docker Compose — optional but recommended for one-command stack
 - **WalletConnect project ID** — for production-quality wallet modal (`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env`)
 
+## Using the demo
+
+If the stack is already running (locally or hosted) and you just want to walk through the UI — connect a wallet, claim mUSDC, open a leveraged trade, liquidate, move the oracle price — see [`DEMO.md`](DEMO.md).
+
 ## Quick start (Docker)
 
 1. Copy environment file and fill in real values (never commit `.env`):
